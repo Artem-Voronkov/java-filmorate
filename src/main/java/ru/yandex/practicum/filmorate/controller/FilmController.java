@@ -84,7 +84,7 @@ public class FilmController {
             throw new ValidationException("Фильм с указанным ID не найден");
         }
 
-        if (updatedFilm.getName() != null){
+        if (updatedFilm.getName() != null) {
             if (updatedFilm.getName().isBlank()) {
                 log.warn("Неудачное обновление: название пустое");
                 throw new ValidationException("Название фильма не может быть пустым");
