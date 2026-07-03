@@ -26,7 +26,7 @@ public class UserController {
     public User createUser(@RequestBody User user) {
         log.info("Попытка создания пользователя: login='{}'", user.getLogin());
 
-        if (user.getEmail() == null || user.getEmail().isBlank() || user.getEmail().contains("@")) {
+        if (user.getEmail() == null || user.getEmail().isBlank() || !user.getEmail().contains("@")) {
             log.warn("Неудачная регистрация: некорректный email");
             throw new ValidationException("Email должен быть указан и содержать символ @");
         }

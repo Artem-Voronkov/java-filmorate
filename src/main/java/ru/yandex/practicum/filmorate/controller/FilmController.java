@@ -32,7 +32,7 @@ public class FilmController {
             throw new ValidationException("Название фильма не может быть пустым");
         }
 
-        if (film.getDescription() != null || film.getDescription().length() > 200) {
+        if (film.getDescription() != null && film.getDescription().length() > 200) {
             log.warn("Неудачная попытка создания фильма: описание длиннее 200 символов");
             throw new ValidationException("Описание не может быть длиннее 200 символов");
         }
