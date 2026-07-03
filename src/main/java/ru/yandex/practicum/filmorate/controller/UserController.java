@@ -14,7 +14,17 @@ import java.util.Map;
 @RequestMapping("/users")
 @Slf4j
 public class UserController {
-    private final Map<Long, User> users = new HashMap<>();
+    private final Map<Long, User> users;
+
+    // Конструктор по умолчанию
+    public UserController() {
+        this(new HashMap<>());
+    }
+
+    // Конструктор для тестов
+    public UserController(Map<Long, User> users) {
+        this.users = users;
+    }
 
     @GetMapping
     public Collection<User> getAllUsers() {
