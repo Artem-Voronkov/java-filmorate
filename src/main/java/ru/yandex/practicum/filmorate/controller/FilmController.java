@@ -81,7 +81,7 @@ public class FilmController {
         Film existingFilm = films.get(updatedFilm.getId());
         if (existingFilm == null) {
             log.warn("Неудачное обновление: фильм с id={} не найден", updatedFilm.getId());
-            throw new ValidationException("Фильм с указанным ID не найден");
+            throw new ValidationException(String.format("Фильм с указанным ID = %d не найден", updatedFilm.getId()));
         }
 
         if (updatedFilm.getName() != null) {

@@ -81,7 +81,7 @@ public class UserController {
         User existingUser = users.get(updatedUser.getId());
         if (existingUser == null) {
             log.warn("Неудачное обновление: пользователь с id={} не найден", updatedUser.getId());
-            throw new ValidationException("Пользователь с указанным id не найден");
+            throw new ValidationException(String.format("Пользователь с указанным id = %d не найден", updatedUser.getId()));
         }
 
         if (updatedUser.getEmail() != null) {

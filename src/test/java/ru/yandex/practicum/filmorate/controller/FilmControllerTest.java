@@ -140,7 +140,7 @@ class FilmControllerTest {
         ValidationException ex = assertThrows(ValidationException.class, () ->
                 filmController.updateFilm(film)
         );
-        assertTrue(ex.getMessage().contains("Фильм с указанным ID не найден"));
+        assertTrue(ex.getMessage().contains("Фильм с указанным ID = 9999 не найден"));
     }
 
     @Test
