@@ -1,35 +1,33 @@
 package ru.yandex.practicum.filmorate.controller;
 
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
-import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
-import ru.yandex.practicum.filmorate.exception.NotFoundException;
 
 @RestControllerAdvice
 @Slf4j
 public class GlobalExceptionHandler {
 
     @ExceptionHandler(ValidationException.class)
-    @ResponseStatus(HttpStatus.BAD_REQUEST)
-    public ErrorResponse handleValidationException(ValidationException ex) {
-        log.warn("Ошибка валидации: {}", ex.getMessage());
-        return new ErrorResponse(ex.getMessage());
+    public ResponseEntity<String> handleValidationException(ValidationException ex) {
+        log.warn("Валидационная ошибка: {}", ex.getMessage());
+        return ResponseEntity.badRequest().body(ex.getMessage());
     }
 
-    @ExceptionHandler(NotFoundException.class)
-    @ResponseStatus(HttpStatus.NOT_FOUND)
-    public ErrorResponse handleNotFoundException(NotFoundException ex) {
-        log.warn("Не найдено: {}", ex.getMessage());
-        return new ErrorResponse(ex.getMessage());
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<String> handleIllegalArgument(IllegalArgumentException ex) {
+        log.warn("Ошибка аргумента: {}", ex.getMessage());
+        if (ex.getMessage() != null && (ex.getMessage().contains("не найден") || ex.getMessage().contains("not found"))) {
+            return ResponseEntity.notFound().build();
+        }
+        return ResponseEntity.badRequest().body(ex.getMessage());
     }
 
     @ExceptionHandler(Exception.class)
-    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
-    public ErrorResponse handleGenericException(Exception ex) {
-        log.error("Необработанная ошибка", ex);
-        return new ErrorResponse("Произошла внутренняя ошибка сервера");
+    public ResponseEntity<String> handleGenericException(Exception ex) {
+        log.error("Непредвиденная ошибка", ex);
+        return ResponseEntity.status(500).body("Произошла внутренняя ошибка сервера");
     }
 }
