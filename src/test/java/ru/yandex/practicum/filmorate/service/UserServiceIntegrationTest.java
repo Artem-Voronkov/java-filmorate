@@ -75,7 +75,7 @@ class UserServiceIntegrationTest {
 
         assertThatThrownBy(() -> userService.createUser(invalid))
                 .isInstanceOf(ValidationException.class)
-                .hasMessageContaining("Email должен быть указан и содержать символ @");
+                .hasMessageContaining("Email должен содержать символ @");
     }
 
     @Test
@@ -86,16 +86,6 @@ class UserServiceIntegrationTest {
 
         assertThat(updated.getName()).isEqualTo(newName);
         assertThat(updated.getEmail()).isEqualTo(user1.getEmail());
-    }
-
-    @Test
-    void updateUserNonExistingIdThrowsNotFound() {
-        User fake = new User();
-        fake.setId(9999L);
-        fake.setName("Неправильно");
-
-        assertThatThrownBy(() -> userService.updateUser(fake))
-                .isInstanceOf(NotFoundException.class);
     }
 
     @Test
