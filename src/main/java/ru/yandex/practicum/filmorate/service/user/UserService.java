@@ -3,9 +3,11 @@ package ru.yandex.practicum.filmorate.service.user;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
+import ru.yandex.practicum.filmorate.exception.NotFoundException; // <-- добавь импорт
 import ru.yandex.practicum.filmorate.model.User;
 import ru.yandex.practicum.filmorate.storage.user.UserStorage;
 
+import java.time.LocalDate;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -31,7 +33,45 @@ public class UserService {
 
     public User updateUser(User user) {
         log.info("Обновление пользователя: id={}", user.getId());
-        return userStorage.update(user);
+        if (user.getId() == null) {
+            throw new ValidationException("Для обновления пользователя ID обязателен");
+        }
+        Optional<User> existingOpt = userStorage.findById(user.getId());
+        if (existingOpt.isEmpty()) {
+            throw new NotFoundException("Пользователь с указанным id = " + user.getId() + " не найден");
+        }
+        User existingUser = existingOpt.get();
+
+        if (user.getEmail() != null) {
+            if (user.getEmail().isBlank() || !user.getEmail().contains("@")) {
+                throw new ValidationException("Email должен содержать символ @");
+            }
+            existingUser.setEmail(user.getEmail());
+        }
+
+        if (user.getLogin() != null) {
+            if (user.getLogin().isBlank() || user.getLogin().contains(" ")) {
+                throw new ValidationException("Логин не может содержать пробелы и быть пустым");
+            }
+            existingUser.setLogin(user.getLogin());
+        }
+
+        if (user.getName() != null) {
+            if (!user.getName().isBlank()) {
+                existingUser.setName(user.getName());
+            } else {
+                existingUser.setName(existingUser.getLogin());
+            }
+        }
+
+        if (user.getBirthday() != null) {
+            if (user.getBirthday().isAfter(LocalDate.now())) {
+                throw new ValidationException("Дата рождения не может быть в будущем");
+            }
+            existingUser.setBirthday(user.getBirthday());
+        }
+
+        return existingUser;
     }
 
     public void addFriend(long userId, long friendId) {
@@ -42,11 +82,14 @@ public class UserService {
         ensureUserExists(friendId);
 
         friends.computeIfAbsent(userId, k -> new HashSet<>()).add(friendId);
-        friends.computeIfAbsent(friendId, k -> new HashSet<>()).add(userId); // двусторонняя дружба
+        friends.computeIfAbsent(friendId, k -> new HashSet<>()).add(userId);
         log.debug("Добавлена дружба: {} <-> {}", userId, friendId);
     }
 
     public void removeFriend(long userId, long friendId) {
+        ensureUserExists(userId);
+        ensureUserExists(friendId);
+
         Set<Long> userFriends = friends.getOrDefault(userId, Collections.emptySet());
         Set<Long> friendFriends = friends.getOrDefault(friendId, Collections.emptySet());
 
@@ -82,7 +125,7 @@ public class UserService {
 
     private void ensureUserExists(long id) {
         if (!userStorage.findById(id).isPresent()) {
-            throw new ValidationException(String.format("Пользователь с ID = %d не найден", id));
+            throw new NotFoundException("Пользователь с ID = " + id + " не найден");
         }
     }
 

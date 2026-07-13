@@ -3,6 +3,7 @@ package ru.yandex.practicum.filmorate.service.film;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
+import ru.yandex.practicum.filmorate.exception.NotFoundException; // <-- добавь
 import ru.yandex.practicum.filmorate.model.Film;
 import ru.yandex.practicum.filmorate.storage.film.FilmStorage;
 import ru.yandex.practicum.filmorate.storage.user.UserStorage;
@@ -16,7 +17,6 @@ public class FilmService {
 
     private final FilmStorage filmStorage;
     private final UserStorage userStorage;
-    // filmId -> set userId
     private final Map<Long, Set<Long>> likes = new HashMap<>();
 
     public FilmService(FilmStorage filmStorage, UserStorage userStorage) {
@@ -64,9 +64,9 @@ public class FilmService {
                     int likes1 = getLikesCount(f1.getId());
                     int likes2 = getLikesCount(f2.getId());
                     if (likes1 != likes2) {
-                        return Integer.compare(likes2, likes1); // по убыванию лайков
+                        return Integer.compare(likes2, likes1);
                     }
-                    return Long.compare(f1.getId(), f2.getId()); // при равенстве — по ID
+                    return Long.compare(f1.getId(), f2.getId());
                 })
                 .limit(count)
                 .map(Film::getId)
@@ -79,13 +79,13 @@ public class FilmService {
 
     private void ensureFilmExists(long id) {
         if (!filmStorage.findById(id).isPresent()) {
-            throw new ValidationException(String.format("Фильм с ID = %d не найден", id));
+            throw new NotFoundException("Фильм с ID = " + id + " не найден");
         }
     }
 
     private void ensureUserExists(long id) {
         if (!userStorage.findById(id).isPresent()) {
-            throw new ValidationException(String.format("Пользователь с ID = %d не найден", id));
+            throw new NotFoundException("Пользователь с ID = " + id + " не найден");
         }
     }
 }
