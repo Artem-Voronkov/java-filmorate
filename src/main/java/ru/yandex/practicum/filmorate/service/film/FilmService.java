@@ -21,7 +21,7 @@ public class FilmService {
 
     public void likeFilm(Long filmId, Long userId) {
         Film film = getFilmOrFail(filmId);
-        film.getLikes().add(userId); // Set гарантирует уникальность
+        film.getLikes().add(userId);
         log.info("Пользователь {} поставил лайк фильму {}", userId, filmId);
     }
 

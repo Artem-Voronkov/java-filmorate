@@ -107,7 +107,6 @@ public class FilmController {
     public void likeFilm(@PathVariable Long id, @PathVariable Long userId) {
         log.info("Лайк: фильм={}, пользователь={}", id, userId);
 
-        // 1. Проверяем существование фильма
         var film = filmStorage.getById(id);
         if (film.isEmpty()) {
             throw new NotFoundException("Фильм с ID = " + id + " не найден");

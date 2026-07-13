@@ -14,21 +14,18 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(ValidationException.class)
     public ResponseEntity<ErrorResponse> handleValidationException(ValidationException ex) {
         log.warn("Валидационная ошибка: {}", ex.getMessage());
-        // Возвращаем 400 + JSON {"error": "..."}
         return ResponseEntity.badRequest().body(new ErrorResponse(ex.getMessage()));
     }
 
     @ExceptionHandler(NotFoundException.class)
     public ResponseEntity<ErrorResponse> handleNotFoundException(NotFoundException ex) {
         log.warn("Не найдено: {}", ex.getMessage());
-        // Возвращаем 404 + JSON {"error": "..."}
         return ResponseEntity.status(404).body(new ErrorResponse(ex.getMessage()));
     }
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleGenericException(Exception ex) {
         log.error("Непредвиденная ошибка", ex);
-        // Возвращаем 500 + JSON {"error": "..."}
         return ResponseEntity.status(500).body(new ErrorResponse("Произошла внутренняя ошибка сервера"));
     }
 }

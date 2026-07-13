@@ -15,7 +15,6 @@ public class UserService {
 
     private final UserStorage userStorage;
 
-    // Внедрение зависимости через конструктор
     public UserService(UserStorage userStorage) {
         this.userStorage = userStorage;
     }
