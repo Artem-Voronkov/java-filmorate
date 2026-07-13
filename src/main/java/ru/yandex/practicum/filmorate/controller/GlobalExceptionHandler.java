@@ -12,20 +12,23 @@ import ru.yandex.practicum.filmorate.exception.NotFoundException;
 public class GlobalExceptionHandler {
 
     @ExceptionHandler(ValidationException.class)
-    public ResponseEntity<String> handleValidationException(ValidationException ex) {
+    public ResponseEntity<ErrorResponse> handleValidationException(ValidationException ex) {
         log.warn("Валидационная ошибка: {}", ex.getMessage());
-        return ResponseEntity.badRequest().body(ex.getMessage());
+        // Возвращаем 400 + JSON {"error": "..."}
+        return ResponseEntity.badRequest().body(new ErrorResponse(ex.getMessage()));
     }
 
     @ExceptionHandler(NotFoundException.class)
-    public ResponseEntity<String> handleNotFoundException(NotFoundException ex) {
+    public ResponseEntity<ErrorResponse> handleNotFoundException(NotFoundException ex) {
         log.warn("Не найдено: {}", ex.getMessage());
-        return ResponseEntity.notFound().build(); // Тело можно оставить пустым — это каноничный 404
+        // Возвращаем 404 + JSON {"error": "..."}
+        return ResponseEntity.status(404).body(new ErrorResponse(ex.getMessage()));
     }
 
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<String> handleGenericException(Exception ex) {
+    public ResponseEntity<ErrorResponse> handleGenericException(Exception ex) {
         log.error("Непредвиденная ошибка", ex);
-        return ResponseEntity.status(500).body("Произошла внутренняя ошибка сервера");
+        // Возвращаем 500 + JSON {"error": "..."}
+        return ResponseEntity.status(500).body(new ErrorResponse("Произошла внутренняя ошибка сервера"));
     }
 }
