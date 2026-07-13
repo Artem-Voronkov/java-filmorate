@@ -49,7 +49,7 @@ public class FilmService {
     public void unlikeFilm(long filmId, long userId) {
         Set<Long> filmLikes = likes.get(filmId);
         if (filmLikes == null || !filmLikes.contains(userId)) {
-            throw new NotFoundException("Пользователь не ставил лайк этому фильму");
+            throw new ValidationException("Пользователь не ставил лайк этому фильму");
         }
         filmLikes.remove(userId);
         if (filmLikes.isEmpty()) {
