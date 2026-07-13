@@ -7,6 +7,7 @@ import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.Film;
 import ru.yandex.practicum.filmorate.service.film.FilmService;
 import ru.yandex.practicum.filmorate.storage.film.FilmStorage;
+import ru.yandex.practicum.filmorate.storage.user.UserStorage;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -20,10 +21,12 @@ public class FilmController {
 
     private final FilmStorage filmStorage;
     private final FilmService filmService;
+    private final UserStorage userStorage;
 
-    public FilmController(FilmStorage filmStorage, FilmService filmService) {
+    public FilmController(FilmStorage filmStorage, FilmService filmService, UserStorage userStorage) {
         this.filmStorage = filmStorage;
         this.filmService = filmService;
+        this.userStorage = userStorage;
     }
 
     @GetMapping
@@ -103,12 +106,35 @@ public class FilmController {
     @PutMapping("/{id}/like/{userId}")
     public void likeFilm(@PathVariable Long id, @PathVariable Long userId) {
         log.info("Лайк: фильм={}, пользователь={}", id, userId);
+
+        // 1. Проверяем существование фильма
+        var film = filmStorage.getById(id);
+        if (film.isEmpty()) {
+            throw new NotFoundException("Фильм с ID = " + id + " не найден");
+        }
+
+        var user = userStorage.getById(userId);
+        if (user.isEmpty()) {
+            throw new NotFoundException("Пользователь с ID = " + userId + " не найден");
+        }
+
         filmService.likeFilm(id, userId);
     }
 
     @DeleteMapping("/{id}/like/{userId}")
     public void unlikeFilm(@PathVariable Long id, @PathVariable Long userId) {
         log.info("Убрать лайк: фильм={}, пользователь={}", id, userId);
+
+        var film = filmStorage.getById(id);
+        if (film.isEmpty()) {
+            throw new NotFoundException("Фильм с ID = " + id + " не найден");
+        }
+
+        var user = userStorage.getById(userId);
+        if (user.isEmpty()) {
+            throw new NotFoundException("Пользователь с ID = " + userId + " не найден");
+        }
+
         filmService.unlikeFilm(id, userId);
     }
 
