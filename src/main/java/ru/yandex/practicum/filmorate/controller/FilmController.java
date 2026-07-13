@@ -2,6 +2,7 @@ package ru.yandex.practicum.filmorate.controller;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
+import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.Film;
 import ru.yandex.practicum.filmorate.service.film.FilmService;
@@ -25,25 +26,22 @@ public class FilmController {
         this.filmService = filmService;
     }
 
-    // GET /films — список всех фильмов
     @GetMapping
     public List<Film> getAllFilms() {
         log.debug("Запрос всех фильмов");
         return List.copyOf(filmStorage.getAll());
     }
 
-    // GET /films/{id} — получить конкретный фильм по ID
     @GetMapping("/{id}")
     public Film getFilmById(@PathVariable Long id) {
         log.info("Запрос фильма по id={}", id);
         var film = filmStorage.getById(id);
         if (film.isEmpty()) {
-            throw new IllegalArgumentException("Фильм с ID = " + id + " не найден");
+            throw new NotFoundException("Фильм с ID = " + id + " не найден");
         }
         return film.get();
     }
 
-    // POST /films — создать фильм
     @PostMapping
     public Film createFilm(@RequestBody Film film) {
         log.info("Попытка создания фильма: name='{}'", film.getName());
@@ -69,7 +67,6 @@ public class FilmController {
         return created;
     }
 
-    // PUT /films — обновить фильм
     @PutMapping
     public Film updateFilm(@RequestBody Film updatedFilm) {
         log.info("Попытка обновления фильма: id={}", updatedFilm.getId());
@@ -80,7 +77,7 @@ public class FilmController {
 
         var existing = filmStorage.getById(updatedFilm.getId());
         if (existing.isEmpty()) {
-            throw new IllegalArgumentException("Фильм с указанным ID = " + updatedFilm.getId() + " не найден");
+            throw new NotFoundException("Фильм с указанным ID = " + updatedFilm.getId() + " не найден");
         }
 
         if (updatedFilm.getName() != null) {
@@ -103,21 +100,18 @@ public class FilmController {
         return updated;
     }
 
-    // PUT /films/{id}/like/{userId} — поставить лайк
     @PutMapping("/{id}/like/{userId}")
     public void likeFilm(@PathVariable Long id, @PathVariable Long userId) {
         log.info("Лайк: фильм={}, пользователь={}", id, userId);
         filmService.likeFilm(id, userId);
     }
 
-    // DELETE /films/{id}/like/{userId} — убрать лайк
     @DeleteMapping("/{id}/like/{userId}")
     public void unlikeFilm(@PathVariable Long id, @PathVariable Long userId) {
         log.info("Убрать лайк: фильм={}, пользователь={}", id, userId);
         filmService.unlikeFilm(id, userId);
     }
 
-    // GET /films/popular?count={count} — топ фильмов по лайкам
     @GetMapping("/popular")
     public List<Film> getPopularFilms(@RequestParam(defaultValue = "10") int count) {
         if (count <= 0) {
