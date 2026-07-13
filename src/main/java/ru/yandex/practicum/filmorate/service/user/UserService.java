@@ -51,13 +51,11 @@ public class UserService {
         return user;
     }
 
-    // Вот тот самый метод, которого не хватало контроллеру
     public List<User> getAllUsers() {
         var all = userStorage.getAllUsers();
         if (all == null) {
             return Collections.emptyList();
         }
-        // Возвращаем копию списка, чтобы нельзя было менять внутреннее хранилище снаружи
         return new ArrayList<>(all);
     }
 
@@ -66,7 +64,6 @@ public class UserService {
             throw new ValidationException("Нельзя добавить самого себя в друзья");
         }
 
-        // Проверка существования пользователей (выбросит NotFoundException, если нет)
         getUserById(userId);
         getUserById(friendId);
 
@@ -107,7 +104,7 @@ public class UserService {
     }
 
     public List<Long> getFriends(long userId) {
-        getUserById(userId); // проверка существования
+        getUserById(userId);
         return new ArrayList<>(userStorage.getFriends(userId));
     }
 
