@@ -1,64 +1,54 @@
 package ru.yandex.practicum.filmorate.storage.user;
 
-import org.springframework.stereotype.Repository;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Component;
 import ru.yandex.practicum.filmorate.model.User;
+
 import java.util.*;
 import java.util.concurrent.atomic.AtomicLong;
-//Импорты все
 
-@Repository
+@Component
+@Slf4j
 public class InMemoryUserStorage implements UserStorage {
 
     private final Map<Long, User> users = new HashMap<>();
-
-    private final Map<Long, Set<Long>> friends = new HashMap<>();
-
     private final AtomicLong nextId = new AtomicLong(1);
 
     @Override
-    public User createUser(User user) {
-        if (user == null) {
-            throw new IllegalArgumentException("Пользователь не может быть null");
-        }
-
+    public User create(User user) {
         long id = nextId.getAndIncrement();
         user.setId(id);
-
         users.put(id, user);
-
-        friends.putIfAbsent(id, new HashSet<>());
-
+        log.debug("Создан пользователь: id={}, login='{}'", id, user.getLogin());
         return user;
     }
 
     @Override
-    public User updateUser(User user) {
-        if (user == null || user.getId() == null) {
-            return null;
+    public User update(User user) {
+        if (user.getId() == null) {
+            throw new IllegalArgumentException("ID должен быть указан");
         }
-
-        Long id = user.getId();
-        if (!users.containsKey(id)) {
-            return null;
+        if (!users.containsKey(user.getId())) {
+            throw new IllegalArgumentException("Пользователь с ID = " + user.getId() + " не найден");
         }
+        users.put(user.getId(), user);
+        log.debug("Обновлён пользователь: id={}", user.getId());
         return user;
     }
 
     @Override
-    public User getUserById(Long id) {
-        return users.get(id);
+    public Optional<User> getById(Long id) {
+        return Optional.ofNullable(users.get(id));
     }
 
     @Override
-    public Collection<User> getAllUsers() {
+    public Collection<User> getAll() {
         return Collections.unmodifiableCollection(users.values());
     }
 
     @Override
-    public Set<Long> getFriends(Long userId) {
-        if (!friends.containsKey(userId)) {
-            friends.put(userId, new HashSet<>());
-        }
-        return friends.get(userId);
+    public void deleteById(Long id) {
+        users.remove(id);
+        log.debug("Удалён пользователь: id={}", id);
     }
 }
