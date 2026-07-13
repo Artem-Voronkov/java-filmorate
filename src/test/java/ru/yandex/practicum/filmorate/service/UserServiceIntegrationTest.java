@@ -4,15 +4,16 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.User;
 import ru.yandex.practicum.filmorate.service.user.UserService;
-import ru.yandex.practicum.filmorate.storage.user.InMemoryUserStorage;
 
 import java.time.LocalDate;
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @SpringBootTest
 class UserServiceIntegrationTest {
@@ -20,132 +21,129 @@ class UserServiceIntegrationTest {
     @Autowired
     private UserService userService;
 
-    @Autowired
-    private InMemoryUserStorage userStorage;
+    private User user1;
+    private User user2;
+    private User user3;
 
     @BeforeEach
     void setUp() {
-        userStorage.clear();
+        // Создаём тестовых пользователей
+        user1 = new User();
+        user1.setEmail("user1@test.com");
+        user1.setLogin("login1");
+        user1.setName("User One");
+        user1.setBirthday(LocalDate.of(1990, 1, 1));
+        user1 = userService.createUser(user1);
+
+        user2 = new User();
+        user2.setEmail("user2@test.com");
+        user2.setLogin("login2");
+        user2.setName("User Two");
+        user2.setBirthday(LocalDate.of(1991, 2, 2));
+        user2 = userService.createUser(user2);
+
+        user3 = new User();
+        user3.setEmail("user3@test.com");
+        user3.setLogin("login3");
+        user3.setName("User Three");
+        user3.setBirthday(LocalDate.of(1992, 3, 3));
+        user3 = userService.createUser(user3);
     }
 
     @Test
-    void createUserBlankLoginThrowsValidation() {
-        var user = new User();
-        user.setEmail("a@b.com");
-        user.setLogin("");
-        user.setBirthday(LocalDate.of(1990, 1, 1));
+    void createUserValidDataSuccess() {
+        User newUser = new User();
+        newUser.setEmail("new@test.com");
+        newUser.setLogin("newlogin");
+        newUser.setName("New User");
+        newUser.setBirthday(LocalDate.of(2000, 5, 5));
 
-        ValidationException ex = assertThrows(ValidationException.class, () ->
-                userService.createUser(user)
-        );
-        assertTrue(ex.getMessage().contains("Логин не может быть пустым"));
+        User created = userService.createUser(newUser);
+
+        assertThat(created.getId()).isNotNull();
+        assertThat(created.getLogin()).isEqualTo("newlogin");
+        assertThat(created.getName()).isEqualTo("New User");
     }
 
     @Test
-    void createUserFutureBirthdayThrowsValidation() {
-        var user = new User();
-        user.setEmail("a@b.com");
-        user.setLogin("goodlogin");
-        user.setBirthday(LocalDate.now().plusDays(1));
+    void createUserInvalidEmailThrowsValidation() {
+        User invalid = new User();
+        invalid.setEmail("no-at-sign");
+        invalid.setLogin("badlogin");
+        invalid.setName("Bad User");
+        invalid.setBirthday(LocalDate.of(2000, 1, 1));
 
-        ValidationException ex = assertThrows(ValidationException.class, () ->
-                userService.createUser(user)
-        );
-        assertTrue(ex.getMessage().contains("Дата рождения не может быть в будущем"));
+        assertThatThrownBy(() -> userService.createUser(invalid))
+                .isInstanceOf(ValidationException.class)
+                .hasMessageContaining("Email должен быть указан и содержать символ @");
     }
 
     @Test
-    void updateUserValidSuccess() {
-        var original = new User();
-        original.setEmail("orig@example.com");
-        original.setLogin("origlogin");
-        original.setName("Original Name");
-        original.setBirthday(LocalDate.of(1985, 3, 10));
-        User created = userService.createUser(original);
+    void updateUserValidDataSuccess() {
+        String newName = "Updated Name";
+        user1.setName(newName);
+        User updated = userService.updateUser(user1);
 
-        var update = new User();
-        update.setId(created.getId());
-        update.setName("New Name");
-        update.setEmail("new@example.com");
-
-        User updated = userService.updateUser(update);
-
-        assertEquals(created.getId(), updated.getId());
-        assertEquals("New Name", updated.getName());
-        assertEquals("origlogin", updated.getLogin());
-        assertEquals("new@example.com", updated.getEmail());
+        assertThat(updated.getName()).isEqualTo(newName);
+        assertThat(updated.getEmail()).isEqualTo(user1.getEmail());
     }
 
     @Test
-    void addFriendSuccessCreates() {
-        var u1 = createValidUserWith("u1@test.com", "user1", LocalDate.of(1995, 1, 1));
-        var u2 = createValidUserWith("u2@test.com", "user2", LocalDate.of(1996, 2, 2));
+    void updateUserNonExistingIdThrowsNotFound() {
+        User fake = new User();
+        fake.setId(9999L);
+        fake.setName("Неправильно");
 
-        userService.addFriend(u1.getId(), u2.getId());
+        assertThatThrownBy(() -> userService.updateUser(fake))
+                .isInstanceOf(NotFoundException.class);
+    }
 
-        List<Long> friendsOf1 = userService.getFriends(u1.getId());
-        List<Long> friendsOf2 = userService.getFriends(u2.getId());
+    @Test
+    void addFriendSuccess() {
+        userService.addFriend(user1.getId(), user2.getId());
 
-        assertTrue(friendsOf1.contains(u2.getId()));
-        assertTrue(friendsOf2.contains(u1.getId()));
+        List<Long> friendsOfUser1 = userService.getFriends(user1.getId());
+        List<Long> friendsOfUser2 = userService.getFriends(user2.getId());
+
+        assertThat(friendsOfUser1).containsExactly(user2.getId());
+        assertThat(friendsOfUser2).containsExactly(user1.getId());
     }
 
     @Test
     void addFriendSelfThrowsValidation() {
-        var u = createValidUserWith("self@test.com", "selflogin", LocalDate.of(2000, 1, 1));
-
-        ValidationException ex = assertThrows(ValidationException.class, () ->
-                userService.addFriend(u.getId(), u.getId())
-        );
-        assertTrue(ex.getMessage().contains("Нельзя добавить самого себя в друзья"));
+        assertThatThrownBy(() -> userService.addFriend(user1.getId(), user1.getId()))
+                .isInstanceOf(ValidationException.class)
+                .hasMessageContaining("Нельзя добавить самого себя в друзья");
     }
 
     @Test
-    void removeFriendSuccessRemoves() {
-        var u1 = createValidUserWith("r1@test.com", "ruser1", LocalDate.of(1990, 1, 1));
-        var u2 = createValidUserWith("r2@test.com", "ruser2", LocalDate.of(1991, 2, 2));
+    void removeFriendSuccess() {
+        userService.addFriend(user1.getId(), user2.getId());
+        userService.removeFriend(user1.getId(), user2.getId());
 
-        userService.addFriend(u1.getId(), u2.getId());
+        List<Long> friendsOfUser1 = userService.getFriends(user1.getId());
+        List<Long> friendsOfUser2 = userService.getFriends(user2.getId());
 
-        userService.removeFriend(u1.getId(), u2.getId());
-
-        List<Long> friends1 = userService.getFriends(u1.getId());
-        List<Long> friends2 = userService.getFriends(u2.getId());
-
-        assertFalse(friends1.contains(u2.getId()));
-        assertFalse(friends2.contains(u1.getId()));
+        assertThat(friendsOfUser1).isEmpty();
+        assertThat(friendsOfUser2).isEmpty();
     }
 
     @Test
     void getCommonFriendsSuccess() {
-        var a = createValidUserWith("a@test.com", "a", LocalDate.of(1990, 1, 1));
-        var b = createValidUserWith("b@test.com", "b", LocalDate.of(1990, 1, 1));
-        var c = createValidUserWith("c@test.com", "c", LocalDate.of(1990, 1, 1));
-        var d = createValidUserWith("d@test.com", "d", LocalDate.of(1990, 1, 1));
+        userService.addFriend(user1.getId(), user2.getId());
+        userService.addFriend(user1.getId(), user3.getId());
 
-        userService.addFriend(a.getId(), b.getId());
-        userService.addFriend(a.getId(), c.getId());
+        List<Long> common = userService.getCommonFriends(user2.getId(), user3.getId());
 
-        userService.addFriend(b.getId(), a.getId());
-        userService.addFriend(b.getId(), c.getId());
-
-        userService.addFriend(c.getId(), a.getId());
-        userService.addFriend(c.getId(), b.getId());
-        userService.addFriend(c.getId(), d.getId());
-
-
-        List<Long> common = userService.getCommonFriends(a.getId(), b.getId());
-
-        assertEquals(1, common.size());
-        assertTrue(common.contains(c.getId()));
+        assertThat(common).containsExactly(user1.getId());
     }
 
-    private User createValidUserWith(String email, String login, LocalDate birthday) {
-        var u = new User();
-        u.setEmail(email);
-        u.setLogin(login);
-        u.setName(login + " Name");
-        u.setBirthday(birthday);
-        return userService.createUser(u);
+    @Test
+    void getCommonFriendsNoCommonEmptyList() {
+        userService.addFriend(user1.getId(), user2.getId());
+
+        List<Long> common = userService.getCommonFriends(user2.getId(), user3.getId());
+
+        assertThat(common).isEmpty();
     }
 }

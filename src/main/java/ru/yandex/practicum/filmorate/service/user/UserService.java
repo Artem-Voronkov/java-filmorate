@@ -2,8 +2,8 @@ package ru.yandex.practicum.filmorate.service.user;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
-import ru.yandex.practicum.filmorate.exception.NotFoundException; // <-- добавь импорт
 import ru.yandex.practicum.filmorate.model.User;
 import ru.yandex.practicum.filmorate.storage.user.UserStorage;
 
@@ -23,6 +23,7 @@ public class UserService {
     }
 
     public List<User> getAllUsers() {
+        log.debug("Запрос на получение списка пользователей");
         return new ArrayList<>(userStorage.getAll());
     }
 
@@ -33,9 +34,11 @@ public class UserService {
 
     public User updateUser(User user) {
         log.info("Обновление пользователя: id={}", user.getId());
+
         if (user.getId() == null) {
             throw new ValidationException("Для обновления пользователя ID обязателен");
         }
+
         Optional<User> existingOpt = userStorage.findById(user.getId());
         if (existingOpt.isEmpty()) {
             throw new NotFoundException("Пользователь с указанным id = " + user.getId() + " не найден");

@@ -2,8 +2,8 @@ package ru.yandex.practicum.filmorate.service.film;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
-import ru.yandex.practicum.filmorate.exception.NotFoundException; // <-- добавь
 import ru.yandex.practicum.filmorate.model.Film;
 import ru.yandex.practicum.filmorate.storage.film.FilmStorage;
 import ru.yandex.practicum.filmorate.storage.user.UserStorage;
@@ -25,6 +25,7 @@ public class FilmService {
     }
 
     public List<Film> getAllFilms() {
+        log.debug("Запрос на получение всех фильмов");
         return new ArrayList<>(filmStorage.getAll());
     }
 
@@ -64,9 +65,9 @@ public class FilmService {
                     int likes1 = getLikesCount(f1.getId());
                     int likes2 = getLikesCount(f2.getId());
                     if (likes1 != likes2) {
-                        return Integer.compare(likes2, likes1);
+                        return Integer.compare(likes2, likes1); // по убыванию лайков
                     }
-                    return Long.compare(f1.getId(), f2.getId());
+                    return Long.compare(f1.getId(), f2.getId()); // при равенстве — по ID
                 })
                 .limit(count)
                 .map(Film::getId)

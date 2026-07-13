@@ -28,7 +28,7 @@ public class InMemoryUserStorage implements UserStorage {
         }
         Optional<User> existingOpt = findById(user.getId());
         if (existingOpt.isEmpty()) {
-            throw new ValidationException(String.format("Пользователь с указанным id = %d не найден", user.getId()));
+            throw new ValidationException("Пользователь с указанным id = " + user.getId() + " не найден");
         }
         User existingUser = existingOpt.get();
 
@@ -50,7 +50,6 @@ public class InMemoryUserStorage implements UserStorage {
             if (!user.getName().isBlank()) {
                 existingUser.setName(user.getName());
             } else {
-                // если явно передали пустую строку — ставим логин
                 existingUser.setName(existingUser.getLogin());
             }
         }
@@ -84,19 +83,15 @@ public class InMemoryUserStorage implements UserStorage {
         if (isCreate && user.getId() != null) {
             throw new ValidationException("При создании пользователя ID должен быть null");
         }
-
         if (user.getEmail() == null || user.getEmail().isBlank() || !user.getEmail().contains("@")) {
             throw new ValidationException("Email должен быть указан и содержать символ @");
         }
-
         if (user.getLogin() == null || user.getLogin().isBlank() || user.getLogin().contains(" ")) {
             throw new ValidationException("Логин не может быть пустым и содержать пробелы");
         }
-
         if (user.getName() == null || user.getName().isBlank()) {
-            user.setName(user.getLogin()); // автоподстановка имени из логина
+            user.setName(user.getLogin());
         }
-
         if (user.getBirthday() == null) {
             throw new ValidationException("Дата рождения обязательна");
         }
@@ -111,9 +106,4 @@ public class InMemoryUserStorage implements UserStorage {
                 .max()
                 .orElse(0L) + 1;
     }
-
-    public void clear() {
-        users.clear();
-    }
-
 }
