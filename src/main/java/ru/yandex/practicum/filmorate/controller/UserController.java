@@ -18,6 +18,7 @@ public class UserController {
 
     private final UserStorage userStorage;
     private final UserService userService;
+    private static final String PATH_LINE = "/{id}/friends/{friendId}";
 
     public UserController(UserStorage userStorage, UserService userService) {
         this.userStorage = userStorage;
@@ -114,7 +115,7 @@ public class UserController {
         return userService.getFriends(id);
     }
 
-    @PutMapping("/{id}/friends/{friendId}")
+    @PutMapping(PATH_LINE)
     public void addFriend(@PathVariable Long id, @PathVariable Long friendId) {
         log.info("Попытка добавить друга: {} -> {}", id, friendId);
 
@@ -135,7 +136,7 @@ public class UserController {
         userService.addFriend(id, friendId);
     }
 
-    @DeleteMapping("/{id}/friends/{friendId}")
+    @DeleteMapping(PATH_LINE)
     public void removeFriend(@PathVariable Long id, @PathVariable Long friendId) {
         log.info("Попытка удалить друга: {} -> {}", id, friendId);
 

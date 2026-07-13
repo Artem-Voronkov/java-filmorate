@@ -17,6 +17,7 @@ import java.util.List;
 @Slf4j
 public class FilmController {
 
+    private static final String PATH_LINE = "/{id}/like/{userId}";
     private static final LocalDate MIN_RELEASE_DATE = LocalDate.of(1895, 12, 28);
 
     private final FilmStorage filmStorage;
@@ -40,7 +41,7 @@ public class FilmController {
         log.info("Запрос фильма по id={}", id);
         var film = filmStorage.getById(id);
         if (film.isEmpty()) {
-            throw new NotFoundException("Фильм с ID = " + id + " не найден");
+            throw new NotFoundException(String.format("Фильм с ID = %d не найден", id));
         }
         return film.get();
     }
@@ -103,24 +104,24 @@ public class FilmController {
         return updated;
     }
 
-    @PutMapping("/{id}/like/{userId}")
+    @PutMapping(PATH_LINE)
     public void likeFilm(@PathVariable Long id, @PathVariable Long userId) {
         log.info("Лайк: фильм={}, пользователь={}", id, userId);
 
         var film = filmStorage.getById(id);
         if (film.isEmpty()) {
-            throw new NotFoundException("Фильм с ID = " + id + " не найден");
+            throw new NotFoundException(String.format("Фильм с ID = %d не найден", id));
         }
 
         var user = userStorage.getById(userId);
         if (user.isEmpty()) {
-            throw new NotFoundException("Пользователь с ID = " + userId + " не найден");
+            throw new NotFoundException(String.format("Пользователь с ID = %d не найден", userId));
         }
 
         filmService.likeFilm(id, userId);
     }
 
-    @DeleteMapping("/{id}/like/{userId}")
+    @DeleteMapping(PATH_LINE)
     public void unlikeFilm(@PathVariable Long id, @PathVariable Long userId) {
         log.info("Убрать лайк: фильм={}, пользователь={}", id, userId);
 
