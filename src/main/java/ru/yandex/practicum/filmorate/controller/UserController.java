@@ -111,8 +111,20 @@ public class UserController {
     @PutMapping("/{id}/friends/{friendId}")
     public void addFriend(@PathVariable Long id, @PathVariable Long friendId) {
         log.info("Попытка добавить друга: {} -> {}", id, friendId);
+
+        var user = userStorage.getById(id);
+        if (user.isEmpty()) {
+            throw new NotFoundException("Пользователь с ID = " + id + " не найден");
+        }
+
+        var friend = userStorage.getById(friendId);
+        if (friend.isEmpty()) {
+            throw new NotFoundException("Пользователь с ID = " + friendId + " не найден");
+        }
+
         userService.addFriend(id, friendId);
     }
+
 
     @DeleteMapping("/{id}/friends/{friendId}")
     public void removeFriend(@PathVariable Long id, @PathVariable Long friendId) {
