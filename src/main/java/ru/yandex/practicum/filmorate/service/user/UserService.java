@@ -32,7 +32,7 @@ public class UserService {
 
     public User updateUser(User user) {
         if (user.getId() == null) {
-            throw new ValidationException("ID пользователя не может быть null при обновлении");
+            throw new NotFoundException("ID пользователя не может быть null при обновлении");
         }
         validateUser(user);
         User updated = userStorage.updateUser(user);
@@ -123,13 +123,13 @@ public class UserService {
 
     private void validateUser(User user) {
         if (user.getEmail() == null || user.getEmail().isBlank()) {
-            throw new ValidationException("Email не может быть пустым");
+            throw new NotFoundException("Email не может быть пустым");
         } else if (!user.getEmail().contains("@")) {
             throw new ValidationException("Email должен содержать символ @");
         }
 
         if (user.getLogin() == null || user.getLogin().isBlank()) {
-            throw new ValidationException("Login не может быть пустым");
+            throw new NotFoundException("Login не может быть пустым");
         }
 
         if (user.getName() == null || user.getName().isBlank()) {
@@ -137,7 +137,7 @@ public class UserService {
         }
 
         if (user.getBirthday() == null) {
-            throw new ValidationException("Дата рождения не может быть пустой");
+            throw new NotFoundException("Дата рождения не может быть пустой");
         }
     }
 }
