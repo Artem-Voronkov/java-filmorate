@@ -1,6 +1,7 @@
 package ru.yandex.practicum.filmorate.storage.user;
 
 import org.springframework.stereotype.Component;
+import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.User;
 
 import java.time.LocalDate;
@@ -13,22 +14,7 @@ public class InMemoryUserStorage implements UserStorage {
 
     @Override
     public User create(User user) {
-        if (user.getEmail() == null || user.getEmail().isBlank() || !user.getEmail().contains("@")) {
-            throw new IllegalArgumentException("Email должен быть указан и содержать символ @");
-        }
-        if (user.getLogin() == null || user.getLogin().isBlank() || user.getLogin().contains(" ")) {
-            throw new IllegalArgumentException("Логин не может быть пустым и содержать пробелы");
-        }
-        if (user.getName() == null || user.getName().isBlank()) {
-            user.setName(user.getLogin());
-        }
-        if (user.getBirthday() == null) {
-            throw new IllegalArgumentException("Дата рождения обязательна");
-        }
-        if (user.getBirthday().isAfter(LocalDate.now())) {
-            throw new IllegalArgumentException("Дата рождения не может быть в будущем");
-        }
-
+        validateUser(user, true);
         long id = generateNextId();
         user.setId(id);
         users.put(id, user);
@@ -38,24 +24,24 @@ public class InMemoryUserStorage implements UserStorage {
     @Override
     public User update(User user) {
         if (user.getId() == null) {
-            throw new IllegalArgumentException("Id должен быть указан");
+            throw new ValidationException("Id должен быть указан");
         }
         Optional<User> existingOpt = findById(user.getId());
         if (existingOpt.isEmpty()) {
-            throw new IllegalArgumentException(String.format("Пользователь с указанным id = %d не найден", user.getId()));
+            throw new ValidationException(String.format("Пользователь с указанным id = %d не найден", user.getId()));
         }
         User existingUser = existingOpt.get();
 
         if (user.getEmail() != null) {
             if (user.getEmail().isBlank() || !user.getEmail().contains("@")) {
-                throw new IllegalArgumentException("Email должен содержать символ @");
+                throw new ValidationException("Email должен содержать символ @");
             }
             existingUser.setEmail(user.getEmail());
         }
 
         if (user.getLogin() != null) {
             if (user.getLogin().isBlank() || user.getLogin().contains(" ")) {
-                throw new IllegalArgumentException("Логин не может содержать пробелы и быть пустым");
+                throw new ValidationException("Логин не может содержать пробелы и быть пустым");
             }
             existingUser.setLogin(user.getLogin());
         }
@@ -71,7 +57,7 @@ public class InMemoryUserStorage implements UserStorage {
 
         if (user.getBirthday() != null) {
             if (user.getBirthday().isAfter(LocalDate.now())) {
-                throw new IllegalArgumentException("Дата рождения не может быть в будущем");
+                throw new ValidationException("Дата рождения не может быть в будущем");
             }
             existingUser.setBirthday(user.getBirthday());
         }
@@ -94,10 +80,40 @@ public class InMemoryUserStorage implements UserStorage {
         users.remove(id);
     }
 
+    private void validateUser(User user, boolean isCreate) {
+        if (isCreate && user.getId() != null) {
+            throw new ValidationException("При создании пользователя ID должен быть null");
+        }
+
+        if (user.getEmail() == null || user.getEmail().isBlank() || !user.getEmail().contains("@")) {
+            throw new ValidationException("Email должен быть указан и содержать символ @");
+        }
+
+        if (user.getLogin() == null || user.getLogin().isBlank() || user.getLogin().contains(" ")) {
+            throw new ValidationException("Логин не может быть пустым и содержать пробелы");
+        }
+
+        if (user.getName() == null || user.getName().isBlank()) {
+            user.setName(user.getLogin()); // автоподстановка имени из логина
+        }
+
+        if (user.getBirthday() == null) {
+            throw new ValidationException("Дата рождения обязательна");
+        }
+        if (user.getBirthday().isAfter(LocalDate.now())) {
+            throw new ValidationException("Дата рождения не может быть в будущем");
+        }
+    }
+
     private long generateNextId() {
         return users.keySet().stream()
                 .mapToLong(Long::longValue)
                 .max()
                 .orElse(0L) + 1;
     }
+
+    public void clear() {
+        users.clear();
+    }
+
 }

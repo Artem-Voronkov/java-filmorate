@@ -9,5 +9,5 @@ public interface FilmStorage {
     Film update(Film film);
     Optional<Film> findById(Long id);
     Collection<Film> getAll();
-    void deleteById(Long id); // полезно для будущего
+    void deleteById(Long id);
 }
