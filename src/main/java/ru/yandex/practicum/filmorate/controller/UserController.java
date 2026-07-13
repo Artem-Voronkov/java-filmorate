@@ -105,12 +105,22 @@ public class UserController {
     @GetMapping("/{id}/friends")
     public Collection<User> getFriends(@PathVariable Long id) {
         log.info("Запрос списка друзей для пользователя id={}", id);
+
+        var user = userStorage.getById(id);
+        if (user.isEmpty()) {
+            throw new NotFoundException("Пользователь с ID = " + id + " не найден");
+        }
+
         return userService.getFriends(id);
     }
 
     @PutMapping("/{id}/friends/{friendId}")
     public void addFriend(@PathVariable Long id, @PathVariable Long friendId) {
         log.info("Попытка добавить друга: {} -> {}", id, friendId);
+
+        if (id.equals(friendId)) {
+            throw new ValidationException("Пользователь не может добавить себя в друзья");
+        }
 
         var user = userStorage.getById(id);
         if (user.isEmpty()) {
@@ -125,16 +135,41 @@ public class UserController {
         userService.addFriend(id, friendId);
     }
 
-
     @DeleteMapping("/{id}/friends/{friendId}")
     public void removeFriend(@PathVariable Long id, @PathVariable Long friendId) {
         log.info("Попытка удалить друга: {} -> {}", id, friendId);
+
+        if (id.equals(friendId)) {
+            throw new ValidationException("Нельзя удалить себя из списка друзей");
+        }
+
+        var user = userStorage.getById(id);
+        if (user.isEmpty()) {
+            throw new NotFoundException("Пользователь с ID = " + id + " не найден");
+        }
+
+        var friend = userStorage.getById(friendId);
+        if (friend.isEmpty()) {
+            throw new NotFoundException("Пользователь с ID = " + friendId + " не найден");
+        }
+
         userService.removeFriend(id, friendId);
     }
 
     @GetMapping("/{id1}/friends/common/{id2}")
     public Collection<User> getCommonFriends(@PathVariable Long id1, @PathVariable Long id2) {
         log.info("Запрос общих друзей между {} и {}", id1, id2);
+
+        var u1 = userStorage.getById(id1);
+        var u2 = userStorage.getById(id2);
+
+        if (u1.isEmpty()) {
+            throw new NotFoundException("Пользователь с ID = " + id1 + " не найден");
+        }
+        if (u2.isEmpty()) {
+            throw new NotFoundException("Пользователь с ID = " + id2 + " не найден");
+        }
+
         return userService.getCommonFriends(id1, id2);
     }
 }
