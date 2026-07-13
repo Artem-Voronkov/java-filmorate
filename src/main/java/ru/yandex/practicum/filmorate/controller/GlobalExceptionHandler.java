@@ -5,6 +5,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
+import ru.yandex.practicum.filmorate.exception.NotFoundException;
 
 @RestControllerAdvice
 @Slf4j
@@ -16,13 +17,10 @@ public class GlobalExceptionHandler {
         return ResponseEntity.badRequest().body(ex.getMessage());
     }
 
-    @ExceptionHandler(IllegalArgumentException.class)
-    public ResponseEntity<String> handleIllegalArgument(IllegalArgumentException ex) {
-        log.warn("Ошибка аргумента: {}", ex.getMessage());
-        if (ex.getMessage() != null && (ex.getMessage().contains("не найден") || ex.getMessage().contains("not found"))) {
-            return ResponseEntity.notFound().build();
-        }
-        return ResponseEntity.badRequest().body(ex.getMessage());
+    @ExceptionHandler(NotFoundException.class)
+    public ResponseEntity<String> handleNotFoundException(NotFoundException ex) {
+        log.warn("Не найдено: {}", ex.getMessage());
+        return ResponseEntity.notFound().build(); // Тело можно оставить пустым — это каноничный 404
     }
 
     @ExceptionHandler(Exception.class)
