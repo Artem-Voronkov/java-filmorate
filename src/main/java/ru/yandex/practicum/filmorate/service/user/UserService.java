@@ -7,8 +7,10 @@ import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.User;
 import ru.yandex.practicum.filmorate.storage.user.UserStorage;
 
-import java.time.LocalDate;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -16,128 +18,129 @@ import java.util.stream.Collectors;
 public class UserService {
 
     private final UserStorage userStorage;
-    private final Map<Long, Set<Long>> friends = new HashMap<>();
 
     public UserService(UserStorage userStorage) {
         this.userStorage = userStorage;
     }
 
-    public List<User> getAllUsers() {
-        log.debug("Запрос на получение списка пользователей");
-        return new ArrayList<>(userStorage.getAll());
-    }
-
     public User createUser(User user) {
-        log.info("Создание пользователя: login='{}'", user.getLogin());
-        return userStorage.create(user);
+        validateUser(user);
+        User created = userStorage.createUser(user);
+        log.info("Создание пользователя: login='{}'", created.getLogin());
+        return created;
     }
 
     public User updateUser(User user) {
-        log.info("Обновление пользователя: id={}", user.getId());
-
         if (user.getId() == null) {
-            throw new ValidationException("Для обновления пользователя ID обязателен");
+            throw new ValidationException("ID пользователя не может быть null при обновлении");
         }
-
-        Optional<User> existingOpt = userStorage.findById(user.getId());
-        if (existingOpt.isEmpty()) {
-            throw new NotFoundException("Пользователь с указанным id = " + user.getId() + " не найден");
+        validateUser(user);
+        User updated = userStorage.updateUser(user);
+        if (updated == null) {
+            throw new NotFoundException("Пользователь с ID = " + user.getId() + " не найден");
         }
-        User existingUser = existingOpt.get();
+        log.info("Обновление пользователя: id={}, login='{}'", updated.getId(), updated.getLogin());
+        return updated;
+    }
 
-        if (user.getEmail() != null) {
-            if (user.getEmail().isBlank() || !user.getEmail().contains("@")) {
-                throw new ValidationException("Email должен содержать символ @");
-            }
-            existingUser.setEmail(user.getEmail());
+    public User getUserById(long id) {
+        User user = userStorage.getUserById(id);
+        if (user == null) {
+            throw new NotFoundException("Пользователь с ID = " + id + " не найден");
         }
+        return user;
+    }
 
-        if (user.getLogin() != null) {
-            if (user.getLogin().isBlank() || user.getLogin().contains(" ")) {
-                throw new ValidationException("Логин не может содержать пробелы и быть пустым");
-            }
-            existingUser.setLogin(user.getLogin());
+    // Вот тот самый метод, которого не хватало контроллеру
+    public List<User> getAllUsers() {
+        var all = userStorage.getAllUsers();
+        if (all == null) {
+            return Collections.emptyList();
         }
-
-        if (user.getName() != null) {
-            if (!user.getName().isBlank()) {
-                existingUser.setName(user.getName());
-            } else {
-                existingUser.setName(existingUser.getLogin());
-            }
-        }
-
-        if (user.getBirthday() != null) {
-            if (user.getBirthday().isAfter(LocalDate.now())) {
-                throw new ValidationException("Дата рождения не может быть в будущем");
-            }
-            existingUser.setBirthday(user.getBirthday());
-        }
-
-        return existingUser;
+        // Возвращаем копию списка, чтобы нельзя было менять внутреннее хранилище снаружи
+        return new ArrayList<>(all);
     }
 
     public void addFriend(long userId, long friendId) {
         if (userId == friendId) {
             throw new ValidationException("Нельзя добавить самого себя в друзья");
         }
-        ensureUserExists(userId);
-        ensureUserExists(friendId);
 
-        friends.computeIfAbsent(userId, k -> new HashSet<>()).add(friendId);
-        friends.computeIfAbsent(friendId, k -> new HashSet<>()).add(userId);
-        log.debug("Добавлена дружба: {} <-> {}", userId, friendId);
+        // Проверка существования пользователей (выбросит NotFoundException, если нет)
+        getUserById(userId);
+        getUserById(friendId);
+
+        Set<Long> userFriends = userStorage.getFriends(userId);
+        Set<Long> friendFriends = userStorage.getFriends(friendId);
+
+        boolean addedToUser = userFriends.add(friendId);
+        boolean addedToFriend = friendFriends.add(userId);
+
+        if (!addedToUser && !addedToFriend) {
+            log.debug("Пользователи {} и {} уже являются друзьями", userId, friendId);
+            return;
+        }
+
+        log.info("Добавлена дружба: пользователь {} и пользователь {}", userId, friendId);
     }
 
     public void removeFriend(long userId, long friendId) {
-        ensureUserExists(userId);
-        ensureUserExists(friendId);
+        if (userId == friendId) {
+            throw new ValidationException("Нельзя удалить самого себя из друзей");
+        }
 
-        Set<Long> userFriends = friends.getOrDefault(userId, Collections.emptySet());
-        Set<Long> friendFriends = friends.getOrDefault(friendId, Collections.emptySet());
+        getUserById(userId);
+        getUserById(friendId);
 
-        userFriends.remove(friendId);
-        friendFriends.remove(userId);
+        Set<Long> userFriends = userStorage.getFriends(userId);
+        Set<Long> friendFriends = userStorage.getFriends(friendId);
 
-        cleanEmptySets(userId, friendId);
-        log.debug("Дружба удалена: {} <-> {}", userId, friendId);
+        boolean removedFromUser = userFriends.remove(friendId);
+        boolean removedFromFriend = friendFriends.remove(userId);
+
+        if (!removedFromUser && !removedFromFriend) {
+            log.debug("У пользователей {} и {} нет дружбы для удаления", userId, friendId);
+            return;
+        }
+
+        log.info("Удалена дружба: пользователь {} и пользователь {}", userId, friendId);
     }
 
     public List<Long> getFriends(long userId) {
-        ensureUserExists(userId);
-        Set<Long> userFriends = friends.getOrDefault(userId, Collections.emptySet());
-        log.debug("Список друзей для пользователя {}: {}", userId, userFriends);
-        return new ArrayList<>(userFriends);
+        getUserById(userId); // проверка существования
+        return new ArrayList<>(userStorage.getFriends(userId));
     }
 
     public List<Long> getCommonFriends(long userId1, long userId2) {
-        ensureUserExists(userId1);
-        ensureUserExists(userId2);
+        getUserById(userId1);
+        getUserById(userId2);
 
-        Set<Long> friends1 = friends.getOrDefault(userId1, Collections.emptySet());
-        Set<Long> friends2 = friends.getOrDefault(userId2, Collections.emptySet());
+        Set<Long> friends1 = userStorage.getFriends(userId1);
+        Set<Long> friends2 = userStorage.getFriends(userId2);
 
-        List<Long> common = friends1.stream()
+        return friends1.stream()
                 .filter(friends2::contains)
                 .sorted()
                 .collect(Collectors.toList());
-
-        log.debug("Общие друзья для {} и {}: {}", userId1, userId2, common);
-        return common;
     }
 
-    private void ensureUserExists(long id) {
-        if (!userStorage.findById(id).isPresent()) {
-            throw new NotFoundException("Пользователь с ID = " + id + " не найден");
+    private void validateUser(User user) {
+        if (user.getEmail() == null || user.getEmail().isBlank()) {
+            throw new ValidationException("Email не может быть пустым");
+        } else if (!user.getEmail().contains("@")) {
+            throw new ValidationException("Email должен содержать символ @");
         }
-    }
 
-    private void cleanEmptySets(long... ids) {
-        for (long id : ids) {
-            Set<Long> set = friends.get(id);
-            if (set != null && set.isEmpty()) {
-                friends.remove(id);
-            }
+        if (user.getLogin() == null || user.getLogin().isBlank()) {
+            throw new ValidationException("Login не может быть пустым");
+        }
+
+        if (user.getName() == null || user.getName().isBlank()) {
+            user.setName(user.getLogin());
+        }
+
+        if (user.getBirthday() == null) {
+            throw new ValidationException("Дата рождения не может быть пустой");
         }
     }
 }
