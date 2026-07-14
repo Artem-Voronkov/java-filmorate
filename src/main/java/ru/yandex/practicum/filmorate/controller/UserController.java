@@ -1,35 +1,44 @@
 package ru.yandex.practicum.filmorate.controller;
 
-import org.springframework.web.bind.annotation.*;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.web.bind.annotation.*;
+import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.User;
+import ru.yandex.practicum.filmorate.service.user.UserService;
+import ru.yandex.practicum.filmorate.storage.user.UserStorage;
 
 import java.time.LocalDate;
 import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/users")
 @Slf4j
 public class UserController {
-    private final Map<Long, User> users;
 
-    // Конструктор по умолчанию
-    public UserController() {
-        this(new HashMap<>());
-    }
+    private final UserStorage userStorage;
+    private final UserService userService;
+    private static final String PATH_LINE = "/{id}/friends/{friendId}";
 
-    // Конструктор для тестов
-    public UserController(Map<Long, User> users) {
-        this.users = users;
+    public UserController(UserStorage userStorage, UserService userService) {
+        this.userStorage = userStorage;
+        this.userService = userService;
     }
 
     @GetMapping
     public Collection<User> getAllUsers() {
-        log.debug("Запрос на получение списка пользователей. Всего пользователей: {}", users.size());
-        return users.values();
+        log.debug("Запрос всех пользователей");
+        return userStorage.getAll();
+    }
+
+    @GetMapping("/{id}")
+    public User getUserById(@PathVariable Long id) {
+        log.info("Запрос пользователя по id={}", id);
+        var user = userStorage.getById(id);
+        if (user.isEmpty()) {
+            throw new NotFoundException("Пользователь с ID = " + id + " не найден");
+        }
+        return user.get();
     }
 
     @PostMapping
@@ -37,36 +46,25 @@ public class UserController {
         log.info("Попытка создания пользователя: login='{}'", user.getLogin());
 
         if (user.getEmail() == null || user.getEmail().isBlank() || !user.getEmail().contains("@")) {
-            log.warn("Неудачная регистрация: некорректный email");
             throw new ValidationException("Email должен быть указан и содержать символ @");
         }
-
         if (user.getLogin() == null || user.getLogin().isBlank() || user.getLogin().contains(" ")) {
-            log.warn("Неудачная регистрация: логин пустой или содержит пробелы");
             throw new ValidationException("Логин не может быть пустым и содержать пробелы");
         }
-
         if (user.getName() == null || user.getName().isBlank()) {
             user.setName(user.getLogin());
             log.debug("Имя не указано, установлено равным логину: '{}'", user.getName());
         }
-
         if (user.getBirthday() == null) {
-            log.warn("Неудачная регистрация: дата рождения отсутствует");
             throw new ValidationException("Дата рождения обязательна");
         }
-
         if (user.getBirthday().isAfter(LocalDate.now())) {
-            log.warn("Неудачная регистрация: дата рождения в будущем");
             throw new ValidationException("Дата рождения не может быть в будущем");
         }
 
-        long id = generateNextId();
-        user.setId(id);
-        users.put(id, user);
-        log.info("Пользователь успешно создан: id={}, login='{}'", id, user.getLogin());
-
-        return user;
+        User created = userStorage.create(user);
+        log.info("Пользователь успешно создан: id={}, login='{}'", created.getId(), created.getLogin());
+        return created;
     }
 
     @PutMapping
@@ -74,58 +72,105 @@ public class UserController {
         log.info("Попытка обновления пользователя: id={}", updatedUser.getId());
 
         if (updatedUser.getId() == null) {
-            log.warn("Неудачное обновление: отсутствует id");
-            throw new ValidationException("Id должен быть указан");
+            throw new ValidationException("ID должен быть указан");
         }
 
-        User existingUser = users.get(updatedUser.getId());
-        if (existingUser == null) {
-            log.warn("Неудачное обновление: пользователь с id={} не найден", updatedUser.getId());
-            throw new ValidationException(String.format("Пользователь с указанным id = %d не найден", updatedUser.getId()));
+        var existing = userStorage.getById(updatedUser.getId());
+        if (existing.isEmpty()) {
+            throw new NotFoundException("Пользователь с указанным ID = " + updatedUser.getId() + " не найден");
         }
 
         if (updatedUser.getEmail() != null) {
             if (updatedUser.getEmail().isBlank() || !updatedUser.getEmail().contains("@")) {
-                log.warn("Неудачное обновление: некорректный email");
                 throw new ValidationException("Email должен содержать символ @");
             }
-            existingUser.setEmail(updatedUser.getEmail());
         }
-
         if (updatedUser.getLogin() != null) {
             if (updatedUser.getLogin().isBlank() || updatedUser.getLogin().contains(" ")) {
-                log.warn("Неудачное обновление: логин содержит пробелы или пустой");
                 throw new ValidationException("Логин не может содержать пробелы и быть пустым");
             }
-            existingUser.setLogin(updatedUser.getLogin());
+        }
+        if (updatedUser.getName() != null && updatedUser.getName().isBlank()) {
+            updatedUser.setName(existing.get().getLogin());
+            log.debug("Имя очищено, установлено равным логину");
+        }
+        if (updatedUser.getBirthday() != null && updatedUser.getBirthday().isAfter(LocalDate.now())) {
+            throw new ValidationException("Дата рождения не может быть в будущем");
         }
 
-        if (updatedUser.getName() != null) {
-            if (!updatedUser.getName().isBlank()) {
-                existingUser.setName(updatedUser.getName());
-            } else {
-                existingUser.setName(existingUser.getLogin()); // Если явно передали пустую строку
-                log.debug("Имя очищено, установлено равным логину");
-            }
-        }
-
-        if (updatedUser.getBirthday() != null) {
-            if (updatedUser.getBirthday().isAfter(LocalDate.now())) {
-                log.warn("Неудачное обновление: дата рождения в будущем");
-                throw new ValidationException("Дата рождения не может быть в будущем");
-            }
-            existingUser.setBirthday(updatedUser.getBirthday());
-        }
-
-        log.info("Пользователь успешно обновлён: id='{}'", existingUser.getId());
-        return existingUser;
+        User updated = userStorage.update(updatedUser);
+        log.info("Пользователь успешно обновлён: id='{}'", updated.getId());
+        return updated;
     }
 
-    private long generateNextId() {
-        return users.keySet().stream()
-                .mapToLong(Long::longValue)
-                .max()
-                .orElse(0L) + 1;
+    @GetMapping("/{id}/friends")
+    public Collection<User> getFriends(@PathVariable Long id) {
+        log.info("Запрос списка друзей для пользователя id={}", id);
+
+        var user = userStorage.getById(id);
+        if (user.isEmpty()) {
+            throw new NotFoundException("Пользователь с ID = " + id + " не найден");
+        }
+
+        return userService.getFriends(id);
     }
 
+    @PutMapping(PATH_LINE)
+    public void addFriend(@PathVariable Long id, @PathVariable Long friendId) {
+        log.info("Попытка добавить друга: {} -> {}", id, friendId);
+
+        if (id.equals(friendId)) {
+            throw new ValidationException("Пользователь не может добавить себя в друзья");
+        }
+
+        var user = userStorage.getById(id);
+        if (user.isEmpty()) {
+            throw new NotFoundException("Пользователь с ID = " + id + " не найден");
+        }
+
+        var friend = userStorage.getById(friendId);
+        if (friend.isEmpty()) {
+            throw new NotFoundException("Пользователь с ID = " + friendId + " не найден");
+        }
+
+        userService.addFriend(id, friendId);
+    }
+
+    @DeleteMapping(PATH_LINE)
+    public void removeFriend(@PathVariable Long id, @PathVariable Long friendId) {
+        log.info("Попытка удалить друга: {} -> {}", id, friendId);
+
+        if (id.equals(friendId)) {
+            throw new ValidationException("Нельзя удалить себя из списка друзей");
+        }
+
+        var user = userStorage.getById(id);
+        if (user.isEmpty()) {
+            throw new NotFoundException("Пользователь с ID = " + id + " не найден");
+        }
+
+        var friend = userStorage.getById(friendId);
+        if (friend.isEmpty()) {
+            throw new NotFoundException("Пользователь с ID = " + friendId + " не найден");
+        }
+
+        userService.removeFriend(id, friendId);
+    }
+
+    @GetMapping("/{id1}/friends/common/{id2}")
+    public Collection<User> getCommonFriends(@PathVariable Long id1, @PathVariable Long id2) {
+        log.info("Запрос общих друзей между {} и {}", id1, id2);
+
+        var u1 = userStorage.getById(id1);
+        var u2 = userStorage.getById(id2);
+
+        if (u1.isEmpty()) {
+            throw new NotFoundException("Пользователь с ID = " + id1 + " не найден");
+        }
+        if (u2.isEmpty()) {
+            throw new NotFoundException("Пользователь с ID = " + id2 + " не найден");
+        }
+
+        return userService.getCommonFriends(id1, id2);
+    }
 }
