@@ -23,7 +23,7 @@ public class FriendshipDbStorage {
     }
 
     public void addFriend(Long userId, Long friendId) {
-        String sql = "INSERT INTO friendships (user_id, friend_id) VALUES (?, ?)";
+        String sql = "INSERT INTO friendships (user_id, friend_id, status) VALUES (?, ?, 'CONFIRMED')";
         try {
             jdbcTemplate.update(sql, userId, friendId);
         } catch (org.springframework.dao.DuplicateKeyException e) {

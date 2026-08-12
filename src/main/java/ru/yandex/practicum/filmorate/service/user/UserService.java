@@ -2,6 +2,7 @@ package ru.yandex.practicum.filmorate.service.user;
 
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
+import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.model.User;
 import ru.yandex.practicum.filmorate.storage.user.UserStorage;
 import ru.yandex.practicum.filmorate.storage.db.FriendshipDbStorage;
@@ -31,6 +32,12 @@ public class UserService {
     }
 
     public void addFriend(Long userId, Long friendId) {
+        if (userStorage.getById(userId).isEmpty()) {
+            throw new NotFoundException("Пользователь с ID = " + userId + " не найден");
+        }
+        if (userStorage.getById(friendId).isEmpty()) {
+            throw new NotFoundException("Пользователь с ID = " + friendId + " не найден");
+        }
         friendshipStorage.addFriend(userId, friendId);
     }
 
