@@ -1,5 +1,7 @@
 package ru.yandex.practicum.filmorate.storage.db;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
@@ -11,6 +13,7 @@ import java.util.Collection;
 @Qualifier("friendshipDbStorage")
 public class FriendshipDbStorage {
 
+    private static final Logger log = LoggerFactory.getLogger(FriendshipDbStorage.class);
     private final JdbcTemplate jdbcTemplate;
     private final UserRowMapper userRowMapper;
 
@@ -24,7 +27,7 @@ public class FriendshipDbStorage {
         try {
             jdbcTemplate.update(sql, userId, friendId);
         } catch (org.springframework.dao.DuplicateKeyException e) {
-
+            log.debug("Дружба между пользователем {} и {} уже существует", userId, friendId);
         }
     }
 

@@ -1,5 +1,7 @@
 package ru.yandex.practicum.filmorate.storage.db;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
@@ -10,6 +12,7 @@ import java.util.List;
 @Qualifier("likeDbStorage")
 public class LikeDbStorage {
 
+    private static final Logger log = LoggerFactory.getLogger(LikeDbStorage.class);
     private final JdbcTemplate jdbcTemplate;
 
     public LikeDbStorage(JdbcTemplate jdbcTemplate) {
@@ -21,7 +24,7 @@ public class LikeDbStorage {
         try {
             jdbcTemplate.update(sql, filmId, userId);
         } catch (org.springframework.dao.DuplicateKeyException e) {
-
+            log.debug("Лайк фильма {} от пользователя {} уже существует", filmId, userId);
         }
     }
 
