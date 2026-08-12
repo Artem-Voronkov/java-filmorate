@@ -13,7 +13,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(ValidationException.class)
     public ResponseEntity<ErrorResponse> handleValidationException(ValidationException ex) {
-        log.warn("Валидационная ошибка: {}", ex.getMessage());
+        log.warn("Ошибка валидации: {}", ex.getMessage());
         return ResponseEntity.badRequest().body(new ErrorResponse(ex.getMessage()));
     }
 
@@ -26,6 +26,6 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleGenericException(Exception ex) {
         log.error("Непредвиденная ошибка", ex);
-        return ResponseEntity.status(500).body(new ErrorResponse("Произошла внутренняя ошибка сервера"));
+        return ResponseEntity.status(500).body(new ErrorResponse("Внутренняя ошибка сервера"));
     }
 }
