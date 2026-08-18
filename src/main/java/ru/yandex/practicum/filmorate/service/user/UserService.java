@@ -49,10 +49,6 @@ public class UserService {
             throw new NotFoundException("Пользователь с ID = " + friendId + " не найден");
         }
 
-        if (!isFriends(userId, friendId)) {
-            throw new NotFoundException("Пользователь с ID = " + friendId + " не находится в друзьях у пользователя " + userId);
-        }
-
         friendshipStorage.removeFriend(userId, friendId);
     }
 
@@ -68,4 +64,3 @@ public class UserService {
         return friendshipStorage.getFriendIds(userId).contains(friendId);
     }
 }
-
