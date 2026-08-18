@@ -20,7 +20,7 @@ public class LikeDbStorage {
     }
 
     public void addLike(Long filmId, Long userId) {
-        String sql = "INSERT INTO film_likes (film_id, user_id) VALUES (?, ?)";
+        String sql = "INSERT INTO likes (film_id, user_id) VALUES (?, ?)";
         try {
             jdbcTemplate.update(sql, filmId, userId);
         } catch (org.springframework.dao.DuplicateKeyException e) {
@@ -29,12 +29,12 @@ public class LikeDbStorage {
     }
 
     public void removeLike(Long filmId, Long userId) {
-        String sql = "DELETE FROM film_likes WHERE film_id = ? AND user_id = ?";
+        String sql = "DELETE FROM likes WHERE film_id = ? AND user_id = ?";
         jdbcTemplate.update(sql, filmId, userId);
     }
 
     public List<Long> getTopFilmIds(int count) {
-        String sql = "SELECT film_id FROM film_likes " +
+        String sql = "SELECT film_id FROM likes " +
                 "GROUP BY film_id " +
                 "ORDER BY COUNT(user_id) DESC " +
                 "LIMIT ?";

@@ -8,14 +8,16 @@ import java.util.HashSet;
 import java.util.Set;
 
 @Data
-@Builder(toBuilder = true)  // ← ключевое: toBuilder = true
+@Builder(toBuilder = true)
 public class Film {
     private Long id;
     private String name;
     private String description;
     private LocalDate releaseDate;
     private Integer duration;
-    private Integer mpaId;
+    private MPARating mpa;
+    @Builder.Default
     private Set<Genre> genres = new HashSet<>();
+    @Builder.Default
     private Set<Long> likes = new HashSet<>();
 }

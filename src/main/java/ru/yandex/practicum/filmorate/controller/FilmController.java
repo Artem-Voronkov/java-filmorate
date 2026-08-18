@@ -14,6 +14,7 @@ import ru.yandex.practicum.filmorate.storage.db.GenreDbStorage;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -59,12 +60,13 @@ public class FilmController {
 
         validateFilm(film);
 
-        MPARating mpa = mpaStorage.getById(film.getMpaId())
-                .orElseThrow(() -> new NotFoundException("Рейтинг MPA с ID = " + film.getMpaId() + " не найден"));
+        MPARating mpa = mpaStorage.getById(film.getMpa().getId())
+                .orElseThrow(() -> new NotFoundException("Рейтинг MPA с ID = " + film.getMpa().getId() + " не найден"));
 
         Set<Genre> genres = getValidatedGenres(film.getGenres());
 
         Film validatedFilm = film.toBuilder()
+                .mpa(mpa)
                 .genres(genres)
                 .build();
 
@@ -79,19 +81,27 @@ public class FilmController {
             throw new ValidationException("ID должен быть указан");
         }
 
-        filmStorage.getById(updatedFilm.getId())
+        Film existingFilm = filmStorage.getById(updatedFilm.getId())
                 .orElseThrow(() -> new NotFoundException("Фильм с ID = " + updatedFilm.getId() + " не найден"));
 
         validateFilmUpdate(updatedFilm);
 
-        if (updatedFilm.getMpaId() != null) {
-            MPARating mpa = mpaStorage.getById(updatedFilm.getMpaId())
-                    .orElseThrow(() -> new NotFoundException("Рейтинг MPA с ID = " + updatedFilm.getMpaId() + " не найден"));
+        MPARating mpa = existingFilm.getMpa();
+        if (updatedFilm.getMpa() != null) {
+            mpa = mpaStorage.getById(updatedFilm.getMpa().getId())
+                    .orElseThrow(() -> new NotFoundException("Рейтинг MPA с ID = " + updatedFilm.getMpa().getId() + " не найден"));
         }
 
-        Set<Genre> genres = getValidatedGenres(updatedFilm.getGenres());
+        Set<Genre> genres = updatedFilm.getGenres() != null
+                ? getValidatedGenres(updatedFilm.getGenres())
+                : existingFilm.getGenres();
 
-        Film validatedFilm = updatedFilm.toBuilder()
+        Film validatedFilm = existingFilm.toBuilder()
+                .name(updatedFilm.getName() != null ? updatedFilm.getName() : existingFilm.getName())
+                .description(updatedFilm.getDescription() != null ? updatedFilm.getDescription() : existingFilm.getDescription())
+                .releaseDate(updatedFilm.getReleaseDate() != null ? updatedFilm.getReleaseDate() : existingFilm.getReleaseDate())
+                .duration(updatedFilm.getDuration() != null ? updatedFilm.getDuration() : existingFilm.getDuration())
+                .mpa(mpa)
                 .genres(genres)
                 .build();
 
@@ -140,8 +150,8 @@ public class FilmController {
         if (film.getDuration() == null || film.getDuration() <= 0) {
             throw new ValidationException("Продолжительность должна быть больше 0");
         }
-        if (film.getMpaId() == null) {
-            throw new ValidationException("Поле mpaId обязательно");
+        if (film.getMpa() == null) {
+            throw new ValidationException("Поле mpa обязательно");
         }
     }
 
@@ -162,7 +172,7 @@ public class FilmController {
 
     private Set<Genre> getValidatedGenres(Set<Genre> genres) {
         if (genres == null || genres.isEmpty()) {
-            return new java.util.HashSet<>();
+            return new HashSet<>();
         }
 
         return genres.stream()
