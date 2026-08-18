@@ -10,9 +10,7 @@ import ru.yandex.practicum.filmorate.storage.db.mapper.UserRowMapper;
 import ru.yandex.practicum.filmorate.storage.user.UserStorage;
 
 import java.util.Collection;
-import java.util.HashSet;
 import java.util.Optional;
-import java.util.Set;
 
 @Repository
 @Qualifier("userDbStorage")
