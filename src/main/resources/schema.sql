@@ -27,7 +27,7 @@ CREATE TABLE IF NOT EXISTS films (
     description VARCHAR(200),
     release_date DATE NOT NULL,
     duration INTEGER NOT NULL,
-    mpa_id INTEGER NOT NULL,  -- ← изменили имя
+    mpa_id INTEGER NOT NULL,
     CONSTRAINT fk_mpa_rating
         FOREIGN KEY (mpa_id) REFERENCES mpa_ratings(id)
 );

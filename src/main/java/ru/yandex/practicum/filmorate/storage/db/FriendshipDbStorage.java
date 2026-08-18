@@ -8,6 +8,8 @@ import org.springframework.stereotype.Repository;
 import ru.yandex.practicum.filmorate.storage.db.mapper.UserRowMapper;
 
 import java.util.Collection;
+import java.util.HashSet;
+import java.util.Set;
 
 @Repository
 @Qualifier("friendshipDbStorage")
@@ -31,14 +33,18 @@ public class FriendshipDbStorage {
         }
     }
 
-    public void removeFriend(Long userId, Long friendId) {
+    public void removeFriend(long userId, long friendId) {
         String sql = "DELETE FROM friendships WHERE user_id = ? AND friend_id = ?";
         jdbcTemplate.update(sql, userId, friendId);
     }
 
-    public Collection<Long> getFriendIds(Long userId) {
+    public Set<Long> getFriendIds(long userId) {
         String sql = "SELECT friend_id FROM friendships WHERE user_id = ?";
-        return jdbcTemplate.queryForList(sql, Long.class, userId);
+        try {
+            return new HashSet<>(jdbcTemplate.queryForList(sql, Long.class, userId));
+        } catch (Exception e) {
+            return new HashSet<>();
+        }
     }
 
     public Collection<Long> getCommonFriendIds(Long userId, Long otherId) {
@@ -48,5 +54,11 @@ public class FriendshipDbStorage {
             WHERE f1.user_id = ? AND f2.user_id = ?
             """;
         return jdbcTemplate.queryForList(sql, Long.class, userId, otherId);
+    }
+
+    public boolean isFriends(long userId, long friendId) {
+        String sql = "SELECT COUNT(*) FROM friendships WHERE user_id = ? AND friend_id = ?";
+        Integer count = jdbcTemplate.queryForObject(sql, Integer.class, userId, friendId);
+        return count != null && count > 0;
     }
 }

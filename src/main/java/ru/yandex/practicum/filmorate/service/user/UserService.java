@@ -41,7 +41,18 @@ public class UserService {
         friendshipStorage.addFriend(userId, friendId);
     }
 
-    public void removeFriend(Long userId, Long friendId) {
+    public void removeFriend(long userId, long friendId) {
+        if (userStorage.getById(userId).isEmpty()) {
+            throw new NotFoundException("Пользователь с ID = " + userId + " не найден");
+        }
+        if (userStorage.getById(friendId).isEmpty()) {
+            throw new NotFoundException("Пользователь с ID = " + friendId + " не найден");
+        }
+
+        if (!isFriends(userId, friendId)) {
+            throw new NotFoundException("Пользователь с ID = " + friendId + " не находится в друзьях у пользователя " + userId);
+        }
+
         friendshipStorage.removeFriend(userId, friendId);
     }
 
@@ -52,4 +63,9 @@ public class UserService {
                 .map(Optional::get)
                 .collect(Collectors.toList());
     }
+
+    public boolean isFriends(long userId, long friendId) {
+        return friendshipStorage.getFriendIds(userId).contains(friendId);
+    }
 }
+

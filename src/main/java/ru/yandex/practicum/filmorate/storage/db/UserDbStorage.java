@@ -3,7 +3,6 @@ package ru.yandex.practicum.filmorate.storage.db;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Primary;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Repository;
 import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.model.User;
@@ -11,12 +10,13 @@ import ru.yandex.practicum.filmorate.storage.db.mapper.UserRowMapper;
 import ru.yandex.practicum.filmorate.storage.user.UserStorage;
 
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.Optional;
+import java.util.Set;
 
 @Repository
 @Qualifier("userDbStorage")
 @Primary
-@Component
 public class UserDbStorage implements UserStorage {
 
     private final JdbcTemplate jdbcTemplate;
@@ -38,7 +38,6 @@ public class UserDbStorage implements UserStorage {
         jdbcTemplate.update("DELETE FROM friendships WHERE user_id = ? OR friend_id = ?", id, id);
         jdbcTemplate.update("DELETE FROM likes WHERE user_id = ?", id);
     }
-
 
     @Override
     public Collection<User> getAll() {

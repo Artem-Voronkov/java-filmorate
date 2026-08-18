@@ -97,6 +97,10 @@ public class UserController {
     @GetMapping("/{id}/friends")
     public Collection<User> getFriends(@PathVariable Long id) {
         log.info("Запрос друзей для пользователя id={}", id);
+
+        userStorage.getById(id)
+                .orElseThrow(() -> new NotFoundException("Пользователь с ID = " + id + " не найден"));
+
         return userService.getFriends(id);
     }
 
@@ -109,9 +113,8 @@ public class UserController {
         userService.addFriend(id, friendId);
     }
 
-    @DeleteMapping(PATH_LINE)
+    @DeleteMapping("/{id}/friends/{friendId}")
     public void removeFriend(@PathVariable Long id, @PathVariable Long friendId) {
-        log.info("Удаление друга: {} -> {}", id, friendId);
         userService.removeFriend(id, friendId);
     }
 
