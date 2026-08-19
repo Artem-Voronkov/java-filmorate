@@ -76,7 +76,8 @@ public class UserController {
         }
 
         userStorage.getById(updatedUser.getId())
-                .orElseThrow(() -> new NotFoundException("Пользователь не найден"));
+                .orElseThrow(() -> new NotFoundException(
+                        String.format("Пользователь с ID = %d не найден", updatedUser.getId())));
 
         if (updatedUser.getEmail() != null && (!updatedUser.getEmail().contains("@") || updatedUser.getEmail().isBlank())) {
             throw new ValidationException("Email должен содержать @");

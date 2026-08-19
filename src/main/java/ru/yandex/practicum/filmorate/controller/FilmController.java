@@ -61,7 +61,8 @@ public class FilmController {
         validateFilm(film);
 
         MPARating mpa = mpaStorage.getById(film.getMpa().getId())
-                .orElseThrow(() -> new NotFoundException("Рейтинг MPA с ID = " + film.getMpa().getId() + " не найден"));
+                .orElseThrow(() -> new NotFoundException(
+                        String.format("Рейтинг MPA с ID = %d не найден", film.getMpa().getId())));
 
         Set<Genre> genres = getValidatedGenres(film.getGenres());
 
