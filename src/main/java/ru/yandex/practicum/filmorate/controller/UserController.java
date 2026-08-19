@@ -75,6 +75,7 @@ public class UserController {
             throw new ValidationException("ID должен быть указан");
         }
 
+        //Исправил
         userStorage.getById(updatedUser.getId())
                 .orElseThrow(() -> new NotFoundException(
                         String.format("Пользователь с ID = %d не найден", updatedUser.getId())));
