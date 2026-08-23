@@ -1,50 +1,57 @@
 package ru.yandex.practicum.filmorate.service.film;
 
-import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
-import ru.yandex.practicum.filmorate.exception.ValidationException;
+import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.model.Film;
+import ru.yandex.practicum.filmorate.storage.db.LikeDbStorage;
 import ru.yandex.practicum.filmorate.storage.film.FilmStorage;
 
-import java.util.*;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
-@Slf4j
 public class FilmService {
 
     private final FilmStorage filmStorage;
+    private final LikeDbStorage likeStorage;
 
-    public FilmService(FilmStorage filmStorage) {
+    public FilmService(@Qualifier("filmDbStorage") FilmStorage filmStorage, LikeDbStorage likeStorage) {
         this.filmStorage = filmStorage;
+        this.likeStorage = likeStorage;
     }
 
     public void likeFilm(Long filmId, Long userId) {
-        Film film = getFilmOrFail(filmId);
-        film.getLikes().add(userId);
-        log.info("Пользователь {} поставил лайк фильму {}", userId, filmId);
+        filmStorage.getById(filmId)
+                .orElseThrow(() -> new NotFoundException("Фильм с ID = " + filmId + " не найден"));
+        likeStorage.addLike(filmId, userId);
     }
 
     public void unlikeFilm(Long filmId, Long userId) {
-        Film film = getFilmOrFail(filmId);
-        boolean removed = film.getLikes().remove(userId);
-        if (!removed) {
-            log.warn("Попытка убрать лайк: пользователь {} не ставил лайк фильму {}", userId, filmId);
-        } else {
-            log.info("Пользователь {} убрал лайк у фильма {}", userId, filmId);
-        }
+        filmStorage.getById(filmId)
+                .orElseThrow(() -> new NotFoundException("Фильм с ID = " + filmId + " не найден"));
+        likeStorage.removeLike(filmId, userId);
     }
 
-    public List<Film> getTop10Films() {
-        return filmStorage.getAll().stream()
-                .sorted((f1, f2) -> Integer.compare(f2.getLikes().size(), f1.getLikes().size()))
-                .limit(10)
+    public List<Film> getTopFilms(int count) {
+        List<Long> topIds = likeStorage.getTopFilmIds(count);
+
+        List<Film> result = topIds.stream()
+                .map(filmStorage::getById)
+                .filter(Optional::isPresent)
+                .map(Optional::get)
                 .collect(Collectors.toList());
-    }
 
-    private Film getFilmOrFail(Long id) {
-        return filmStorage.getById(id)
-                .orElseThrow(() -> new ValidationException(
-                        "Фильм с ID = " + id + " не найден"));
+        if (result.size() < count) {
+            Set<Long> already = result.stream().map(Film::getId).collect(Collectors.toSet());
+            filmStorage.getAll().stream()
+                    .filter(f -> !already.contains(f.getId()))
+                    .limit(count - result.size())
+                    .forEach(result::add);
+        }
+
+        return result;
     }
 }
